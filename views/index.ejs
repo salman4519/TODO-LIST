@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List</title>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .todo-app {
+      max-width: 400px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .input-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    #task-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    #add-task-btn {
+      padding: 10px 20px;
+      background: #5cb85c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #add-task-btn:hover {
+      background: #4cae4c;
+    }
+
+    #task-list {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    .task-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .task-item.completed {
+      text-decoration: line-through;
+      color: #888;
+    }
+
+    .task-buttons {
+      display: flex;
+      gap: 5px;
+    }
+
+    button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button.delete {
+      background: #d9534f;
+      color: white;
+    }
+
+    button.complete {
+      background: #5bc0de;
+      color: white;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="todo-app">
+    <h1>To-Do List</h1>
+    <div class="input-container">
+      <input id="task-input" type="text" placeholder="Enter a task..." />
+      <button id="add-task-btn">Add Task</button>
+    </div>
+    <ul id="task-list"></ul>
+  </div>
+  
+  <script>
+    const BASE_URL = "http://localhost:4000/tasks";
+
+const taskInput = document.getElementById("task-input");
+const addTaskBtn = document.getElementById("add-task-btn");
+const taskList = document.getElementById("task-list");
+
+async function fetchTasks() {
+  taskList.innerHTML = "<p>Loading tasks...</p>";
+  try {
+    const response = await fetch(BASE_URL);
+    const tasks = await response.json();
+    renderTasks(tasks);
+  } catch (error) {
+    taskList.innerHTML = "<p>Error fetching tasks. Please try again later.</p>";
+    console.error("Error fetching tasks:", error);
+  }
+}
+
+async function addTask() {
+  const taskText = taskInput.value.trim();
+  if (taskText === "") {
+    alert("Task cannot be empty!");
+    return;
+  }
+  try {
+    await fetch(BASE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: taskText }),
+    });
+    taskInput.value = "";
+    fetchTasks();
+  } catch (error) {
+    alert("Error adding task. Please try again.");
+    console.error("Error adding task:", error);
+  }
+}
+
+async function updateTask(taskId, completed) {
+  try {
+    await fetch(`${BASE_URL}/${taskId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ completed: !completed }),
+    });
+    fetchTasks();
+  } catch (error) {
+    alert("Error updating task. Please try again.");
+    console.error("Error updating task:", error);
+  }
+}
+
+async function deleteTask(taskId) {
+  try {
+    await fetch(`${BASE_URL}/${taskId}`, { method: "DELETE" });
+    fetchTasks();
+  } catch (error) {
+    alert("Error deleting task. Please try again.");
+    console.error("Error deleting task:", error);
+  }
+}
+
+function renderTasks(tasks) {
+  document.title = `To-Do List (${tasks.length} tasks)`;
+  taskList.innerHTML = "";
+  if (tasks.length === 0) {
+    taskList.innerHTML = "<p>No tasks available. Add a new one!</p>";
+    return;
+  }
+  tasks.forEach((task) => {
+    const li = document.createElement("li");
+    li.className = `task-item ${task.completed ? "completed" : ""}`;
+    li.innerHTML = `
+      <span>${task.text}</span>
+      <div class="task-buttons">
+        <button class="complete">${task.completed ? "Undo" : "Complete"}</button>
+        <button class="delete">Delete</button>
+      </div>
+    `;
+    li.querySelector(".complete").addEventListener("click", () => {
+      updateTask(task.id, task.completed);
+    });
+    li.querySelector(".delete").addEventListener("click", () => {
+      deleteTask(task.id);
+    });
+    taskList.appendChild(li);
+  });
+}
+
+addTaskBtn.addEventListener("click", addTask);
+taskInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addTask();
+});
+
+fetchTasks();
+
+  </script>
+</body>
+</html>
